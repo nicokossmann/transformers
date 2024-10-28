@@ -160,7 +160,6 @@ class LlavaOnevisionProcessor(ProcessorMixin):
                 to_numpy_array(image_inputs["pixel_values"][0][0]),
                 channel_dim=output_kwargs["images_kwargs"].get("data_format"),
             )
-            image_inputs = self._check_for_base_images(image_inputs)
             text = self._expand_image_tokens(text, image_sizes, height, width, self.image_token)
 
         if videos is not None:
@@ -177,11 +176,6 @@ class LlavaOnevisionProcessor(ProcessorMixin):
         text_inputs = self.tokenizer(text, **output_kwargs["text_kwargs"])
         return BatchFeature(data={**text_inputs, **image_inputs, **video_inputs})
     
-    def _check_for_base_images(self, input_images):
-        if  all(image_size[0] == self.image_processor.size['height'] and image_size[1] ==  self.image_processor.size['width'] for image_size in list(image_inputs['image_sizes'])):
-            input_images['pixel_values'] = torch.unsqueeze(input_images['pixel_values'][:, 0, :, :, :], dim=1)
-        else:
-            return input_images
 
     def _expand_image_tokens(
         self,
