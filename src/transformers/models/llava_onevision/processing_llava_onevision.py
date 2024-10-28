@@ -18,6 +18,7 @@ Processor class for LLaVa-Onevision.
 
 import math
 import os
+import torch
 from typing import Iterable, List, Union
 
 from ...feature_extraction_utils import BatchFeature
@@ -152,13 +153,14 @@ class LlavaOnevisionProcessor(ProcessorMixin):
         image_inputs = video_inputs = {}
 
         if images is not None:
+            # TODO: Add support for base image
             image_inputs = self.image_processor(images, **output_kwargs["images_kwargs"])
-
             image_sizes = iter(image_inputs["image_sizes"])
             height, width = get_image_size(
                 to_numpy_array(image_inputs["pixel_values"][0][0]),
                 channel_dim=output_kwargs["images_kwargs"].get("data_format"),
             )
+            image_inputs = self._check_for_base_images(image_inputs)
             text = self._expand_image_tokens(text, image_sizes, height, width, self.image_token)
 
         if videos is not None:
@@ -174,6 +176,12 @@ class LlavaOnevisionProcessor(ProcessorMixin):
 
         text_inputs = self.tokenizer(text, **output_kwargs["text_kwargs"])
         return BatchFeature(data={**text_inputs, **image_inputs, **video_inputs})
+    
+    def _check_for_base_images(self, input_images):
+        if  all(image_size[0] == self.image_processor.size['height'] and image_size[1] ==  self.image_processor.size['width'] for image_size in list(image_inputs['image_sizes'])):
+            input_images['pixel_values'] = torch.unsqueeze(input_images['pixel_values'][:, 0, :, :, :], dim=1)
+        else:
+            return input_images
 
     def _expand_image_tokens(
         self,
@@ -211,8 +219,11 @@ class LlavaOnevisionProcessor(ProcessorMixin):
         )
 
         # The base patch covers the entire image (no CLS for SigLIP)
-        base_features = self.num_image_tokens
-        num_image_tokens = unpadded_features + newline_features + base_features
+        if orig_height == 384 and orig_width == 384:
+            num_image_tokens = unpadded_features + newline_features
+        else:
+            base_features = self.num_image_tokens
+            num_image_tokens = unpadded_features + newline_features + base_features
         return num_image_tokens
 
     def _get_unpadded_features(self, height, width, patches_height, patches_width, scale_height, scale_width):

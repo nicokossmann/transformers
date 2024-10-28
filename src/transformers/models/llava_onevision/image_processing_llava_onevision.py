@@ -429,9 +429,10 @@ class LlavaOnevisionImageProcessor(BaseImageProcessor):
             data_format=data_format,
             input_data_format=input_data_format,
         )
-
-        image_patches = [resized_original_image] + patches
-
+        if image_size == (384, 384):
+            image_patches = [resized_original_image]
+        else:
+            image_patches = [resized_original_image] + patches
         return image_patches
 
     # Copied from transformers.models.llava_next.image_processing_llava_next.LlavaNextImageProcessor._pad_for_batching

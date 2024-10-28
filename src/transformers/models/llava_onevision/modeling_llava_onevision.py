@@ -107,7 +107,8 @@ def image_size_to_num_patches(image_size, grid_pinpoints, patch_size: int):
         for j in range(0, width, patch_size):
             num_patches += 1
     # add the base patch
-    num_patches += 1
+    if image_size[0] != 384 and image_size[1] != 384:
+        num_patches += 1
     return num_patches
 
 
